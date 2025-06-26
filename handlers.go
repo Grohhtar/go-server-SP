@@ -281,7 +281,7 @@ func (app *app) deleteFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if file.OwnerID != id {
+	if file.OwnerID != id && user.IsAdmin == 0 {
 		sendError(w, Error{403, "You do not have permission to delete this file", "Forbidden"}, nil)
 		return
 	}
@@ -684,7 +684,13 @@ func (app *app) shareFile(w http.ResponseWriter, r *http.Request) {
 func (app *app) getShareFile(w http.ResponseWriter, r *http.Request) {
 	id := r.Context().Value("id").(int64)
 
-	output, err := app.Query.GetSharedFiles(app.Ctx, id)
+	user, err := app.Query.GetUser(app.Ctx, id)
+	if err != nil {
+		sendError(w, Error{400, "Database", "Internal Server Error"}, err)
+		return
+	}
+
+	output, err := app.Query.GetSharedFiles(app.Ctx, database.GetSharedFilesParams{OwnerID: id, IsAdmin: user.IsAdmin})
 	if err != nil {
 		sendError(w, Error{400, "Database", "Internal Server Error"}, err)
 		return
