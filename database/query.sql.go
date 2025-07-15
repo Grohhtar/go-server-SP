@@ -13,20 +13,26 @@ import (
 
 const addAlbum = `-- name: AddAlbum :exec
 INSERT INTO album (
-  title, owner_id, cover_id
+  title, owner_id, cover_id, description
 ) VALUES (
-  ?, ?, ?
+  ?, ?, ?, ?
 )
 `
 
 type AddAlbumParams struct {
-	Title   types.JSONNullString `json:"title"`
-	OwnerID int64                `json:"owner_id"`
-	CoverID types.JSONNullInt64  `json:"cover_id"`
+	Title       types.JSONNullString `json:"title"`
+	OwnerID     int64                `json:"owner_id"`
+	CoverID     types.JSONNullInt64  `json:"cover_id"`
+	Description types.JSONNullString `json:"description"`
 }
 
 func (q *Queries) AddAlbum(ctx context.Context, arg AddAlbumParams) error {
-	_, err := q.db.ExecContext(ctx, addAlbum, arg.Title, arg.OwnerID, arg.CoverID)
+	_, err := q.db.ExecContext(ctx, addAlbum,
+		arg.Title,
+		arg.OwnerID,
+		arg.CoverID,
+		arg.Description,
+	)
 	return err
 }
 
@@ -197,7 +203,7 @@ func (q *Queries) DeleteFile(ctx context.Context, id int64) error {
 }
 
 const getAlbum = `-- name: GetAlbum :one
-SELECT id, owner_id, cover_id, title FROM album
+SELECT id, owner_id, cover_id, title, description FROM album
 WHERE id = ?
 `
 
@@ -209,12 +215,13 @@ func (q *Queries) GetAlbum(ctx context.Context, id int64) (Album, error) {
 		&i.OwnerID,
 		&i.CoverID,
 		&i.Title,
+		&i.Description,
 	)
 	return i, err
 }
 
 const getAlbums = `-- name: GetAlbums :many
-SELECT id, owner_id, cover_id, title FROM album
+SELECT id, owner_id, cover_id, title, description FROM album
 WHERE owner_id = ?
 `
 
@@ -232,6 +239,7 @@ func (q *Queries) GetAlbums(ctx context.Context, ownerID int64) ([]Album, error)
 			&i.OwnerID,
 			&i.CoverID,
 			&i.Title,
+			&i.Description,
 		); err != nil {
 			return nil, err
 		}
@@ -536,7 +544,7 @@ WHERE files.owner_id = ? OR ? = 1
 
 type GetSharedFilesParams struct {
 	OwnerID int64       `json:"owner_id"`
-	IsAdmin interface{} `json:"IsAdmin"`
+	IsAdmin interface{} `json:"column_2"`
 }
 
 func (q *Queries) GetSharedFiles(ctx context.Context, arg GetSharedFilesParams) ([]Fileguestshare, error) {
@@ -698,6 +706,22 @@ func (q *Queries) GetUserByLogin(ctx context.Context, login string) (GetUserByLo
 		&i.IsAdmin,
 	)
 	return i, err
+}
+
+const setAlbumCover = `-- name: SetAlbumCover :exec
+UPDATE album
+SET cover_id = ?
+WHERE id = ?
+`
+
+type SetAlbumCoverParams struct {
+	CoverID types.JSONNullInt64 `json:"cover_id"`
+	ID      int64               `json:"id"`
+}
+
+func (q *Queries) SetAlbumCover(ctx context.Context, arg SetAlbumCoverParams) error {
+	_, err := q.db.ExecContext(ctx, setAlbumCover, arg.CoverID, arg.ID)
+	return err
 }
 
 const tagsConnect = `-- name: TagsConnect :exec

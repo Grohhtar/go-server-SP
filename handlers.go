@@ -678,6 +678,51 @@ func (app *app) getFileFromAlbum(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (app *app) setAlbumCover(w http.ResponseWriter, r *http.Request) {
+	input := struct {
+		AlbumID int64               `json:"album_id"`
+		CoverID types.JSONNullInt64 `json:"cover_id"`
+	}{}
+
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		sendError(w, Error{400, "Could not acquire json data", "Bad Request"}, err)
+		return
+	}
+
+	id := r.Context().Value("id").(int64)
+
+	album, err := app.Query.GetAlbum(app.Ctx, input.AlbumID)
+	if err != nil {
+		sendError(w, Error{400, "Database", "Internal Server Error"}, err)
+		return
+	}
+
+	if album.OwnerID != id {
+		sendError(w, Error{403, "You do not own this album", "Forbidden"}, nil)
+		return
+	}
+
+	if input.CoverID.Valid {
+		file, err := app.Query.GetFile(app.Ctx, input.CoverID.Int64)
+		if err != nil {
+			sendError(w, Error{400, "Database", "Internal Server Error"}, err)
+			return
+		}
+
+		if file.OwnerID != id {
+			sendError(w, Error{403, "You do not own this file", "Forbidden"}, nil)
+			return
+		}
+	}
+
+	if err := app.Query.SetAlbumCover(app.Ctx, database.SetAlbumCoverParams{CoverID: input.CoverID, ID: input.AlbumID}); err != nil {
+		sendError(w, Error{400, "Database", "Internal Server Error"}, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 func (app *app) shareFile(w http.ResponseWriter, r *http.Request) {
 	var input database.AddGuestFileParams
 
