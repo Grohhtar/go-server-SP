@@ -97,7 +97,7 @@ WHERE fileTags.tag_id = ? AND files.owner_id = ?;
 
 
 -- name: GetFiles :many
-SELECT id, file_name, checksum, created_at FROM files 
+SELECT id, file_name, checksum, created_at, description, coordinates FROM files 
 WHERE owner_id = ?;
 
 -- name: GetFile :one

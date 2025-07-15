@@ -321,15 +321,17 @@ func (q *Queries) GetFileOwner(ctx context.Context, id int64) (int64, error) {
 }
 
 const getFiles = `-- name: GetFiles :many
-SELECT id, file_name, checksum, created_at FROM files 
+SELECT id, file_name, checksum, created_at, description, coordinates FROM files 
 WHERE owner_id = ?
 `
 
 type GetFilesRow struct {
-	ID        int64              `json:"id"`
-	FileName  string             `json:"file_name"`
-	Checksum  string             `json:"checksum"`
-	CreatedAt types.JSONNullTime `json:"created_at"`
+	ID          int64                `json:"id"`
+	FileName    string               `json:"file_name"`
+	Checksum    string               `json:"checksum"`
+	CreatedAt   types.JSONNullTime   `json:"created_at"`
+	Description types.JSONNullString `json:"description"`
+	Coordinates types.JSONNullString `json:"coordinates"`
 }
 
 func (q *Queries) GetFiles(ctx context.Context, ownerID int64) ([]GetFilesRow, error) {
@@ -346,6 +348,8 @@ func (q *Queries) GetFiles(ctx context.Context, ownerID int64) ([]GetFilesRow, e
 			&i.FileName,
 			&i.Checksum,
 			&i.CreatedAt,
+			&i.Description,
+			&i.Coordinates,
 		); err != nil {
 			return nil, err
 		}
@@ -532,7 +536,7 @@ WHERE files.owner_id = ? OR ? = 1
 
 type GetSharedFilesParams struct {
 	OwnerID int64       `json:"owner_id"`
-	IsAdmin interface{} `json:"column_2"`
+	IsAdmin interface{} `json:"IsAdmin"`
 }
 
 func (q *Queries) GetSharedFiles(ctx context.Context, arg GetSharedFilesParams) ([]Fileguestshare, error) {
